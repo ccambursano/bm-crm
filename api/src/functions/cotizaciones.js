@@ -27,8 +27,9 @@ app.http("cotizacionesCreate", {
       .input("estado", sql.NVarChar, b.estado || "borrador")
       .input("fecha", sql.Date, b.fecha || null)
       .input("link", sql.NVarChar, b.link || null)
-      .query(`INSERT INTO cotizaciones (cliente, marca, descripcion, monto, estado, fecha, link)
-              OUTPUT INSERTED.* VALUES (@cliente, @marca, @descripcion, @monto, @estado, @fecha, @link)`);
+      .input("moneda", sql.NVarChar, b.moneda || "ARS")
+      .query(`INSERT INTO cotizaciones (cliente, marca, descripcion, monto, estado, fecha, link, moneda)
+              OUTPUT INSERTED.* VALUES (@cliente, @marca, @descripcion, @monto, @estado, @fecha, @link, @moneda)`);
     return { status: 201, jsonBody: result.recordset[0] };
   },
 });
@@ -50,8 +51,9 @@ app.http("cotizacionesUpdate", {
       .input("estado", sql.NVarChar, b.estado || "borrador")
       .input("fecha", sql.Date, b.fecha || null)
       .input("link", sql.NVarChar, b.link || null)
+      .input("moneda", sql.NVarChar, b.moneda || "ARS")
       .query(`UPDATE cotizaciones SET cliente=@cliente, marca=@marca, descripcion=@descripcion,
-              monto=@monto, estado=@estado, fecha=@fecha, link=@link OUTPUT INSERTED.* WHERE id=@id`);
+              monto=@monto, estado=@estado, fecha=@fecha, link=@link, moneda=@moneda OUTPUT INSERTED.* WHERE id=@id`);
     if (!result.recordset.length) return { status: 404, jsonBody: { error: "No encontrado" } };
     return { jsonBody: result.recordset[0] };
   },
