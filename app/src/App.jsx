@@ -377,7 +377,7 @@ function PipelineView({ list }) {
 }
 
 // ---------- COTIZACIONES ----------
-function CotizacionesView({ list }) {
+function CotizacionesView({ list, clientes }) {
   const { items, loaded, error, create, update, remove } = list;
   const [modal, setModal] = useState(null);
   const empty = { cliente: "", marca: "informatica", descripcion: "", monto: "", estado: "borrador", fecha: new Date().toISOString().slice(0, 10), link: "" };
@@ -455,7 +455,12 @@ function CotizacionesView({ list }) {
 
       {modal && (
         <Modal title={modal === "new" ? "Nueva cotización" : "Editar cotización"} onClose={() => setModal(null)}>
-          <Field label="Cliente"><input style={inputStyle} value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} /></Field>
+          <Field label="Cliente">
+            <input style={inputStyle} list="clientes-datalist" value={form.cliente} onChange={(e) => setForm({ ...form, cliente: e.target.value })} />
+            <datalist id="clientes-datalist">
+              {(clientes || []).map((c) => <option key={c.id} value={c.nombre} />)}
+            </datalist>
+          </Field>
           <Field label="Marca">
             <select style={inputStyle} value={form.marca} onChange={(e) => setForm({ ...form, marca: e.target.value })}>
               <option value="informatica">BM Informática</option>
@@ -596,7 +601,7 @@ export default function BMCrm() {
         {tab === "dashboard" && <DashboardView clientes={clientes} pipeline={pipeline} cotizaciones={cotizaciones} />}
         {tab === "clientes" && <ClientesView list={clientes} />}
         {tab === "pipeline" && <PipelineView list={pipeline} />}
-        {tab === "cotizaciones" && <CotizacionesView list={cotizaciones} />}
+        {tab === "cotizaciones" && <CotizacionesView list={cotizaciones} clientes={clientes.items} />}
       </div>
     </div>
   );
