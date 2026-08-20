@@ -407,6 +407,20 @@ function CotizacionesView({ list, clientes }) {
         <BtnPrimary onClick={openNew}><Plus size={15} /> Nueva cotización</BtnPrimary>
       </div>
 
+      <div style={{ marginBottom: 16 }}>
+        <a
+          href="https://arbminformatica.sharepoint.com/sites/Comercial/Documentos%20compartidos/Presupuestos"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            color: "#1F3E8E", fontWeight: 600, fontSize: 13, textDecoration: "none",
+          }}
+        >
+          <Link2 size={14} /> Abrir carpeta de Presupuestos en SharePoint
+        </a>
+      </div>
+
       {!loaded ? (
         <div style={{ padding: 40, textAlign: "center", color: "#9AA0AE", fontSize: 13 }}>Cargando cotizaciones…</div>
       ) : items.length === 0 ? (
