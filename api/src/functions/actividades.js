@@ -24,8 +24,10 @@ app.http("actividadesCreate", {
       .input("tipo", sql.NVarChar, b.tipo || "llamada")
       .input("fecha", sql.Date, b.fecha || null)
       .input("notas", sql.NVarChar, b.notas || null)
-      .query(`INSERT INTO actividades (prospecto, tipo, fecha, notas)
-              OUTPUT INSERTED.* VALUES (@prospecto, @tipo, @fecha, @notas)`);
+      .input("proxima_accion", sql.NVarChar, b.proxima_accion || null)
+      .input("proxima_fecha", sql.Date, b.proxima_fecha || null)
+      .query(`INSERT INTO actividades (prospecto, tipo, fecha, notas, proxima_accion, proxima_fecha)
+              OUTPUT INSERTED.* VALUES (@prospecto, @tipo, @fecha, @notas, @proxima_accion, @proxima_fecha)`);
     return { status: 201, jsonBody: result.recordset[0] };
   },
 });
@@ -44,7 +46,10 @@ app.http("actividadesUpdate", {
       .input("tipo", sql.NVarChar, b.tipo || "llamada")
       .input("fecha", sql.Date, b.fecha || null)
       .input("notas", sql.NVarChar, b.notas || null)
-      .query(`UPDATE actividades SET prospecto=@prospecto, tipo=@tipo, fecha=@fecha, notas=@notas
+      .input("proxima_accion", sql.NVarChar, b.proxima_accion || null)
+      .input("proxima_fecha", sql.Date, b.proxima_fecha || null)
+      .query(`UPDATE actividades SET prospecto=@prospecto, tipo=@tipo, fecha=@fecha, notas=@notas,
+              proxima_accion=@proxima_accion, proxima_fecha=@proxima_fecha
               OUTPUT INSERTED.* WHERE id=@id`);
     if (!result.recordset.length) return { status: 404, jsonBody: { error: "No encontrado" } };
     return { jsonBody: result.recordset[0] };
