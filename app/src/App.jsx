@@ -529,12 +529,17 @@ function CotizacionesView({ list, clientes }) {
 }
 
 // ---------- SEGUIMIENTO ----------
-function SeguimientoView({ list, pipeline }) {
+function SeguimientoView({ list, pipeline, clientes }) {
   const { items, loaded, error, create, update, remove } = list;
   const [modal, setModal] = useState(null);
   const [filterTipo, setFilterTipo] = useState("todos");
   const empty = { prospecto: "", tipo: "llamada", fecha: new Date().toISOString().slice(0, 10), notas: "" };
   const [form, setForm] = useState(empty);
+
+  const nombresSugeridos = [
+    ...(pipeline || []).map((p) => p.nombre),
+    ...(clientes || []).map((c) => c.nombre),
+  ].filter((n, i, arr) => n && arr.indexOf(n) === i);
 
   const openNew = () => { setForm(empty); setModal("new"); };
   const openEdit = (a) => { setForm({ ...empty, ...a, fecha: a.fecha ? String(a.fecha).slice(0, 10) : "" }); setModal("edit"); };
@@ -601,7 +606,7 @@ function SeguimientoView({ list, pipeline }) {
           <Field label="Prospecto / Empresa">
             <input style={inputStyle} list="prospectos-datalist" value={form.prospecto} onChange={(e) => setForm({ ...form, prospecto: e.target.value })} />
             <datalist id="prospectos-datalist">
-              {(pipeline || []).map((p) => <option key={p.id} value={p.nombre} />)}
+              {nombresSugeridos.map((n) => <option key={n} value={n} />)}
             </datalist>
           </Field>
           <Field label="Tipo de contacto">
@@ -739,7 +744,7 @@ export default function BMCrm() {
         {tab === "dashboard" && <DashboardView clientes={clientes} pipeline={pipeline} cotizaciones={cotizaciones} />}
         {tab === "clientes" && <ClientesView list={clientes} />}
         {tab === "pipeline" && <PipelineView list={pipeline} />}
-        {tab === "seguimiento" && <SeguimientoView list={actividades} pipeline={pipeline.items} />}
+        {tab === "seguimiento" && <SeguimientoView list={actividades} pipeline={pipeline.items} clientes={clientes.items} />}
         {tab === "cotizaciones" && <CotizacionesView list={cotizaciones} clientes={clientes.items} />}
       </div>
     </div>
