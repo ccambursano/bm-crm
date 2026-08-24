@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Building2, Users, TrendingUp, FileText, Plus, Edit2, Trash2, X,
-  Search, LayoutDashboard, Wrench, Server, ChevronRight, AlertCircle, Link2, LogOut
+  Search, LayoutDashboard, Wrench, Server, ChevronRight, AlertCircle, Link2, LogOut,
+  Phone, Mail, MapPin, Users2, ClipboardList
 } from "lucide-react";
 import { api, getCurrentUser } from "./api";
 
@@ -22,6 +23,15 @@ const STAGES = [
   { id: "ganado", label: "Ganado" },
   { id: "perdido", label: "Perdido" },
 ];
+
+const TIPOS_ACTIVIDAD = {
+  llamada: { label: "Teléfono", color: "#1F3E8E", icon: Phone },
+  email: { label: "Email", color: "#515CA0", icon: Mail },
+  visita: { label: "Visita", color: "#B5651D", icon: MapPin },
+  cotizacion: { label: "Cotización enviada", color: "#1F7A4D", icon: FileText },
+  reunion: { label: "Reunión", color: "#8A4FBE", icon: Users2 },
+  otro: { label: "Otro", color: "#8A8F98", icon: ClipboardList },
+};
 
 const QUOTE_STATUS = {
   borrador: { label: "Borrador", color: "#8A8F98" },
@@ -518,6 +528,103 @@ function CotizacionesView({ list, clientes }) {
   );
 }
 
+// ---------- SEGUIMIENTO ----------
+function SeguimientoView({ list, pipeline }) {
+  const { items, loaded, error, create, update, remove } = list;
+  const [modal, setModal] = useState(null);
+  const [filterTipo, setFilterTipo] = useState("todos");
+  const empty = { prospecto: "", tipo: "llamada", fecha: new Date().toISOString().slice(0, 10), notas: "" };
+  const [form, setForm] = useState(empty);
+
+  const openNew = () => { setForm(empty); setModal("new"); };
+  const openEdit = (a) => { setForm({ ...empty, ...a, fecha: a.fecha ? String(a.fecha).slice(0, 10) : "" }); setModal("edit"); };
+  const save = () => {
+    if (!form.prospecto.trim()) return;
+    if (modal === "new") create(form); else update(form.id, form);
+    setModal(null);
+  };
+
+  const filtered = items.filter((a) => filterTipo === "todos" || a.tipo === filterTipo);
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+        <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+          <option value="todos">Todos los tipos</option>
+          {Object.entries(TIPOS_ACTIVIDAD).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <BtnPrimary onClick={openNew}><Plus size={15} /> Nuevo contacto</BtnPrimary>
+      </div>
+
+      {!loaded ? (
+        <div style={{ padding: 40, textAlign: "center", color: "#9AA0AE", fontSize: 13 }}>Cargando seguimiento…</div>
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={ClipboardList} title="Sin contactos registrados" subtitle="Registrá cada llamada, visita o email a un prospecto para llevar el historial completo del seguimiento." />
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {filtered.map((a) => {
+            const t = TIPOS_ACTIVIDAD[a.tipo] || TIPOS_ACTIVIDAD.otro;
+            const Icon = t.icon;
+            return (
+              <div key={a.id} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "flex-start", background: "#fff",
+                borderRadius: 12, padding: "14px 16px", border: "1px solid #EEF0F5", borderLeft: `4px solid ${t.color}`,
+              }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <div style={{ background: t.color + "16", borderRadius: 8, padding: 8, height: "fit-content" }}>
+                    <Icon size={16} color={t.color} strokeWidth={2.3} />
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 800, color: "#1A1D29", fontSize: 14.5 }}>{a.prospecto}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: t.color }}>{t.label}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#9AA0AE", marginBottom: a.notas ? 4 : 0 }}>
+                      {a.fecha ? String(a.fecha).slice(0, 10) : "Sin fecha"}
+                    </div>
+                    {a.notas && <div style={{ fontSize: 13, color: "#4B5160", maxWidth: 520 }}>{a.notas}</div>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => openEdit(a)} style={iconBtnStyle}><Edit2 size={14} color="#515CA0" /></button>
+                  <button onClick={() => remove(a.id)} style={iconBtnStyle}><Trash2 size={14} color="#B23B3B" /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {error && <div style={errorBoxStyle}><AlertCircle size={13} /> {error}</div>}
+
+      {modal && (
+        <Modal title={modal === "new" ? "Nuevo contacto" : "Editar contacto"} onClose={() => setModal(null)}>
+          <Field label="Prospecto / Empresa">
+            <input style={inputStyle} list="prospectos-datalist" value={form.prospecto} onChange={(e) => setForm({ ...form, prospecto: e.target.value })} />
+            <datalist id="prospectos-datalist">
+              {(pipeline || []).map((p) => <option key={p.id} value={p.nombre} />)}
+            </datalist>
+          </Field>
+          <Field label="Tipo de contacto">
+            <select style={inputStyle} value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+              {Object.entries(TIPOS_ACTIVIDAD).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Fecha">
+            <input type="date" style={inputStyle} value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} />
+          </Field>
+          <Field label="Notas">
+            <textarea style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} />
+          </Field>
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
+            <BtnGhost onClick={() => setModal(null)}>Cancelar</BtnGhost>
+            <BtnPrimary onClick={save}>Guardar</BtnPrimary>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 // ---------- DASHBOARD ----------
 function DashboardView({ clientes, pipeline, cotizaciones }) {
   const activos = clientes.items.filter((c) => c.estado === "activo").length;
@@ -579,6 +686,7 @@ const TABS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "clientes", label: "Clientes", icon: Building2 },
   { id: "pipeline", label: "Pipeline", icon: TrendingUp },
+  { id: "seguimiento", label: "Seguimiento", icon: ClipboardList },
   { id: "cotizaciones", label: "Cotizaciones", icon: FileText },
 ];
 
@@ -588,6 +696,7 @@ export default function BMCrm() {
   const clientes = useApiList("clientes");
   const pipeline = useApiList("pipeline");
   const cotizaciones = useApiList("cotizaciones");
+  const actividades = useApiList("actividades");
 
   useEffect(() => { getCurrentUser().then(setUser); }, []);
 
@@ -630,6 +739,7 @@ export default function BMCrm() {
         {tab === "dashboard" && <DashboardView clientes={clientes} pipeline={pipeline} cotizaciones={cotizaciones} />}
         {tab === "clientes" && <ClientesView list={clientes} />}
         {tab === "pipeline" && <PipelineView list={pipeline} />}
+        {tab === "seguimiento" && <SeguimientoView list={actividades} pipeline={pipeline.items} />}
         {tab === "cotizaciones" && <CotizacionesView list={cotizaciones} clientes={clientes.items} />}
       </div>
     </div>
