@@ -533,8 +533,13 @@ function SeguimientoView({ list, pipeline, clientes }) {
   const { items, loaded, error, create, update, remove } = list;
   const [modal, setModal] = useState(null);
   const [filterTipo, setFilterTipo] = useState("todos");
-  const empty = { prospecto: "", tipo: "llamada", fecha: new Date().toISOString().slice(0, 10), notas: "" };
+  const empty = { prospecto: "", tipo: "llamada", fecha: new Date().toISOString().slice(0, 10), notas: "", proxima_accion: "", proxima_fecha: "" };
   const [form, setForm] = useState(empty);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const pendientes = items
+    .filter((a) => a.proxima_accion && a.proxima_fecha)
+    .sort((a, b) => String(a.proxima_fecha).localeCompare(String(b.proxima_fecha)));
 
   const nombresSugeridos = [
     ...(pipeline || []).map((p) => p.nombre),
@@ -542,7 +547,7 @@ function SeguimientoView({ list, pipeline, clientes }) {
   ].filter((n, i, arr) => n && arr.indexOf(n) === i);
 
   const openNew = () => { setForm(empty); setModal("new"); };
-  const openEdit = (a) => { setForm({ ...empty, ...a, fecha: a.fecha ? String(a.fecha).slice(0, 10) : "" }); setModal("edit"); };
+  const openEdit = (a) => { setForm({ ...empty, ...a, fecha: a.fecha ? String(a.fecha).slice(0, 10) : "", proxima_fecha: a.proxima_fecha ? String(a.proxima_fecha).slice(0, 10) : "" }); setModal("edit"); };
   const save = () => {
     if (!form.prospecto.trim()) return;
     if (modal === "new") create(form); else update(form.id, form);
@@ -553,18 +558,49 @@ function SeguimientoView({ list, pipeline, clientes }) {
 
   return (
     <div>
+      {pendientes.length > 0 && (
+        <div style={{
+          background: "#FFF8EC", border: "1px solid #F0DDB8", borderRadius: 12,
+          padding: "14px 16px", marginBottom: 18,
+        }}>
+          <div style={{ fontWeight: 800, color: "#8A5A00", fontSize: 13, marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.3 }}>
+            Próximas acciones pendientes
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {pendientes.map((a) => {
+              const vencida = a.proxima_fecha < hoy;
+              return (
+                <div key={a.id} style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                  background: "#fff", borderRadius: 8, padding: "8px 12px",
+                  border: `1px solid ${vencida ? "#F3C6C6" : "#EEF0F5"}`,
+                }}>
+                  <div style={{ fontSize: 13 }}>
+                    <b style={{ color: "#1A1D29" }}>{a.prospecto}</b>
+                    <span style={{ color: "#6B7280" }}> — {a.proxima_accion}</span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: vencida ? "#B23B3B" : "#8A5A00" }}>
+                    {String(a.proxima_fecha).slice(0, 10)}{vencida ? " (vencida)" : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
         <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)} style={{ ...inputStyle, width: 200 }}>
           <option value="todos">Todos los tipos</option>
           {Object.entries(TIPOS_ACTIVIDAD).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
-        <BtnPrimary onClick={openNew}><Plus size={15} /> Nuevo contacto</BtnPrimary>
+        <BtnPrimary onClick={openNew}><Plus size={15} /> Nuevo seguimiento</BtnPrimary>
       </div>
 
       {!loaded ? (
         <div style={{ padding: 40, textAlign: "center", color: "#9AA0AE", fontSize: 13 }}>Cargando seguimiento…</div>
       ) : filtered.length === 0 ? (
-        <EmptyState icon={ClipboardList} title="Sin contactos registrados" subtitle="Registrá cada llamada, visita o email a un prospecto para llevar el historial completo del seguimiento." />
+        <EmptyState icon={ClipboardList} title="Sin seguimientos registrados" subtitle="Registrá cada llamada, visita o email a un prospecto para llevar el historial completo del seguimiento." />
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {filtered.map((a) => {
@@ -588,6 +624,11 @@ function SeguimientoView({ list, pipeline, clientes }) {
                       {a.fecha ? String(a.fecha).slice(0, 10) : "Sin fecha"}
                     </div>
                     {a.notas && <div style={{ fontSize: 13, color: "#4B5160", maxWidth: 520 }}>{a.notas}</div>}
+                    {a.proxima_accion && (
+                      <div style={{ fontSize: 12, color: "#8A5A00", marginTop: 6, fontWeight: 600 }}>
+                        Próxima acción: {a.proxima_accion} — {a.proxima_fecha ? String(a.proxima_fecha).slice(0, 10) : ""}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
@@ -602,7 +643,7 @@ function SeguimientoView({ list, pipeline, clientes }) {
       {error && <div style={errorBoxStyle}><AlertCircle size={13} /> {error}</div>}
 
       {modal && (
-        <Modal title={modal === "new" ? "Nuevo contacto" : "Editar contacto"} onClose={() => setModal(null)}>
+        <Modal title={modal === "new" ? "Nuevo seguimiento" : "Editar seguimiento"} onClose={() => setModal(null)}>
           <Field label="Prospecto / Empresa">
             <input style={inputStyle} list="prospectos-datalist" value={form.prospecto} onChange={(e) => setForm({ ...form, prospecto: e.target.value })} />
             <datalist id="prospectos-datalist">
@@ -620,6 +661,18 @@ function SeguimientoView({ list, pipeline, clientes }) {
           <Field label="Notas">
             <textarea style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} />
           </Field>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <Field label="Próxima acción (ej: Llamar, Pedir reunión)">
+                <input style={inputStyle} value={form.proxima_accion} onChange={(e) => setForm({ ...form, proxima_accion: e.target.value })} />
+              </Field>
+            </div>
+            <div style={{ width: 150 }}>
+              <Field label="Fecha">
+                <input type="date" style={inputStyle} value={form.proxima_fecha} onChange={(e) => setForm({ ...form, proxima_fecha: e.target.value })} />
+              </Field>
+            </div>
+          </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 6 }}>
             <BtnGhost onClick={() => setModal(null)}>Cancelar</BtnGhost>
             <BtnPrimary onClick={save}>Guardar</BtnPrimary>
